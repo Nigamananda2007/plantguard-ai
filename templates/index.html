@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlantGuard AI 🌿 - Crop Disease & Pest Diagnostic Lab</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+
+    <!-- Header & Navigation -->
+    <header class="app-header">
+        <div class="container header-container">
+            <div class="brand">
+                <span class="brand-icon">🌿</span>
+                <div>
+                    <h1 class="brand-title" data-i18n="brand_title">PlantGuard AI</h1>
+                    <p class="brand-subtitle" data-i18n="brand_subtitle">Smart Crop Disease & Pest Damage Diagnostic Lab</p>
+                </div>
+            </div>
+            <div class="header-status">
+                <div class="status-badge" id="modelStatusBadge">
+                    <span class="status-dot green" id="statusDot"></span>
+                    <span class="status-label" id="statusLabel" data-i18n="model_status_demo">Demo Expert Mode</span>
+                </div>
+                <div class="lang-selector-group" title="Select Language">
+                    <span class="lang-globe-icon">🌐</span>
+                    <select id="langSelect" class="lang-select" aria-label="Select Language">
+                        <option value="en">English</option>
+                        <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="container main-content">
+
+        <!-- Intro Banner -->
+        <section class="intro-section">
+            <div class="intro-card">
+                <h2 data-i18n="intro_heading">Protect Your Crops with AI-Assisted Leaf Diagnostics</h2>
+                <p data-i18n="intro_desc">Upload a high-resolution photo of a crop leaf to screen for fungal/bacterial diseases, evaluate insect feeding damage, and receive verified organic & cultural treatment recommendations.</p>
+                
+                <div class="model-honesty-pill">
+                    <span class="pill-icon">💡</span>
+                    <span><strong data-i18n="ai_transparency_label">AI Transparency:</strong> <span data-i18n="model_honesty_pill">Multimodal AI Vision & Diagnostic Reasoning enabled with automatic botanical heuristic fallback.</span></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Diagnostic Workspace Grid -->
+        <section class="diagnostic-grid">
+
+            <!-- Left Column: Upload & Samples -->
+            <div class="input-column">
+                
+                <!-- Upload Box -->
+                <div class="card upload-card">
+                    <div class="card-header">
+                        <h3 data-i18n="upload_card_title">1. Upload Leaf Image</h3>
+                        <span class="badge" data-i18n="upload_badge">JPG, JPEG, PNG • Max 5MB</span>
+                    </div>
+
+                    <div class="drop-zone" id="dropZone">
+                        <input type="file" id="imageInput" accept=".jpg,.jpeg,.png,image/jpeg,image/png" hidden>
+                        
+                        <div class="drop-prompt" id="dropPrompt">
+                            <div class="upload-icon-circle">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                            </div>
+                            <h4 data-i18n="drop_prompt_title">Drag & Drop your leaf image here</h4>
+                            <p data-i18n="drop_prompt_sub">or click to browse from your device</p>
+                            <button type="button" class="btn btn-secondary" id="browseBtn" data-i18n="btn_choose_file">Choose File</button>
+                        </div>
+
+                        <!-- Image Preview Container -->
+                        <div class="preview-container hidden" id="previewContainer">
+                            <img id="imagePreview" src="" alt="Uploaded Leaf Preview">
+                            <div class="preview-overlay">
+                                <span id="previewDetails" class="preview-details" data-i18n="preview_ready">Image ready for diagnosis</span>
+                                <button type="button" class="btn-icon" id="clearBtn" title="Remove image">✕</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Optional Field Context Box -->
+                    <div class="field-context-container">
+                        <details class="context-details" id="contextDetails">
+                            <summary class="context-summary">
+                                <span class="summary-icon">📝</span>
+                                <span data-i18n="field_context_title">Add Field Context (Optional - Enhances AI Reasoning)</span>
+                            </summary>
+                            <div class="context-inputs">
+                                <div class="form-group">
+                                    <label for="plantNameInput" data-i18n="label_crop_name">Plant / Crop Name:</label>
+                                    <input type="text" id="plantNameInput" class="form-control" placeholder="e.g. Tomato, Chilli, Rose, Potato">
+                                </div>
+                                <div class="form-group">
+                                    <label for="wateringInput" data-i18n="label_watering">Watering Frequency:</label>
+                                    <select id="wateringInput" class="form-control">
+                                        <option value="" data-i18n="opt_select">Select frequency...</option>
+                                        <option value="Daily" data-i18n="opt_water_daily">Daily watering</option>
+                                        <option value="2-3 times per week" data-i18n="opt_water_moderate">2-3 times per week</option>
+                                        <option value="Weekly or rarely" data-i18n="opt_water_rare">Weekly or rarely</option>
+                                        <option value="Overwatered / Heavy rain" data-i18n="opt_water_excess">Waterlogged / Heavy recent rain</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="insectsInput" data-i18n="label_insects">Insects / Pests Observed?</label>
+                                    <select id="insectsInput" class="form-control">
+                                        <option value="No insects visible" data-i18n="opt_insect_none">No insects visible</option>
+                                        <option value="Chewing caterpillars or beetles seen" data-i18n="opt_insect_caterpillars">Chewing caterpillars or beetles seen</option>
+                                        <option value="Tiny whiteflies or aphids on leaf underside" data-i18n="opt_insect_aphids">Tiny whiteflies or aphids on underside</option>
+                                        <option value="Fine spider webbing visible" data-i18n="opt_insect_mites">Fine webbing / spider mites</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- Action Button -->
+                    <div class="action-footer">
+                        <button type="button" class="btn btn-primary btn-block" id="analyzeBtn" disabled>
+                            <span class="btn-text" id="analyzeBtnText" data-i18n="btn_analyze">🔬 Analyze Leaf Condition</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- One-Click Sample Leaves -->
+                <div class="card samples-card">
+                    <div class="card-header">
+                        <h3 data-i18n="samples_card_title">Or Test With Sample Leaves</h3>
+                        <span class="badge badge-light" data-i18n="samples_badge">Instant Demo</span>
+                    </div>
+                    <p class="section-desc" data-i18n="samples_desc">Click any sample below to evaluate diagnosis without uploading your own file:</p>
+                    <div class="samples-grid" id="samplesContainer">
+                        <div class="sample-skeleton" data-i18n="sample_loading">Loading sample leaves...</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Diagnostics & Results -->
+            <div class="results-column">
+
+                <!-- Placeholder State (Before Analysis) -->
+                <div class="card placeholder-card" id="placeholderCard">
+                    <div class="placeholder-art">🌿🔍</div>
+                    <h3 data-i18n="placeholder_title">Diagnostic Report Awaiting Input</h3>
+                    <p data-i18n="placeholder_desc">Upload a photo or select one of the demo samples on the left to start the diagnostic scan.</p>
+                    <ul class="checklist">
+                        <li>✓ <span data-i18n="checklist_1">Disease classification with confidence percentage</span></li>
+                        <li>✓ <span data-i18n="checklist_2">Independent physical pest/insect damage assessment</span></li>
+                        <li>✓ <span data-i18n="checklist_3">Organic, chemical, and preventive treatment guidelines</span></li>
+                        <li>✓ <span data-i18n="checklist_4">Image clarity and out-of-distribution leaf validation</span></li>
+                    </ul>
+                </div>
+
+                <!-- Loading State Spinner -->
+                <div class="card loading-card hidden" id="loadingCard">
+                    <div class="spinner-container">
+                        <div class="leaf-spinner"></div>
+                        <h3 id="loadingStatusText" data-i18n="loading_step_1_title">Scanning leaf image structure...</h3>
+                        <p id="loadingSubtext" data-i18n="loading_step_1_sub">Verifying RGB color channels and resolution</p>
+                    </div>
+                </div>
+
+                <!-- Error Message Banner -->
+                <div class="card error-card hidden" id="errorCard">
+                    <div class="error-icon">⚠️</div>
+                    <div class="error-content">
+                        <h4 id="errorTitle" data-i18n="error_default_title">Image Rejection Notice</h4>
+                        <p id="errorMessage">The image could not be processed.</p>
+                        <button type="button" class="btn btn-sm btn-outline-danger" id="dismissErrorBtn" data-i18n="btn_dismiss">Dismiss</button>
+                    </div>
+                </div>
+
+                <!-- Full Results Container -->
+                <div class="results-wrapper hidden" id="resultsWrapper">
+
+                    <!-- Disease Diagnosis Card -->
+                    <div class="card result-card">
+                        <div class="card-header">
+                            <div class="header-with-tag">
+                                <span class="tag-label" data-i18n="tag_disease">Primary Pathogen Diagnosis</span>
+                                <h3 id="diseaseCondition">Condition Name</h3>
+                                <p class="crop-name" id="cropName">Crop Name</p>
+                            </div>
+                            <div class="metric-group">
+                                <div class="metric-box">
+                                    <span class="metric-label" data-i18n="metric_confidence">Confidence</span>
+                                    <span class="metric-value highlight" id="confidenceValue">88.5%</span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="metric-label" data-i18n="metric_severity">Severity</span>
+                                    <span class="badge" id="severityBadge">Moderate</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Confidence Bar -->
+                        <div class="progress-track">
+                            <div class="progress-fill" id="confidenceBar" style="width: 88%;"></div>
+                        </div>
+
+                        <!-- Farmer Friendly Explanation Box -->
+                        <div class="farmer-callout hidden" id="farmerCallout">
+                            <span class="farmer-callout-icon">🌾</span>
+                            <div class="farmer-callout-content">
+                                <strong data-i18n="farmer_callout_title">Farmer Advisory Note:</strong>
+                                <p id="farmerExplanationText"></p>
+                            </div>
+                        </div>
+
+                        <!-- Pathogen & Symptom Details -->
+                        <div class="details-grid">
+                            <div class="detail-box">
+                                <strong data-i18n="label_pathogen">Pathogen / Cause:</strong>
+                                <span id="pathogenName">Alternaria solani</span>
+                            </div>
+                            <div class="detail-box">
+                                <strong data-i18n="label_causes">Environmental / Biological Factors:</strong>
+                                <span id="diseaseCauses">High humidity and warm temperatures</span>
+                            </div>
+                        </div>
+
+                        <!-- Symptoms Checklist -->
+                        <div class="symptoms-section">
+                            <h4 data-i18n="symptoms_heading">Observed Pathological Symptoms</h4>
+                            <ul class="symptoms-list" id="symptomsList">
+                                <!-- Populated dynamically -->
+                            </ul>
+                        </div>
+
+                        <!-- Differential Diagnoses -->
+                        <div class="differential-section" id="differentialSection">
+                            <h4 data-i18n="differentials_heading">Alternative Differential Diagnoses</h4>
+                            <div class="differential-chips" id="differentialList">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic AI Follow-up & Uncertainty Card -->
+                    <div class="card uncertainty-card hidden" id="uncertaintyCard">
+                        <div class="uncertainty-header">
+                            <span class="uncertainty-icon">💡</span>
+                            <div>
+                                <h4 data-i18n="uncertainty_heading">AI Diagnostic Reasoning & Uncertainty</h4>
+                                <p id="uncertaintyText" class="uncertainty-desc"></p>
+                            </div>
+                        </div>
+                        <div class="followup-container hidden" id="followupContainer">
+                            <h5 data-i18n="followup_title">Follow-up Questions from AI:</h5>
+                            <ul id="followupList" class="followup-list"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Separate Pest Damage Card -->
+                    <div class="card result-card pest-card">
+                        <div class="card-header">
+                            <div class="header-with-tag">
+                                <span class="tag-label tag-pest" data-i18n="tag_pest">Pest & Insect Damage Evaluation</span>
+                                <h3 id="pestDamageType">No Physical Pest Damage Detected</h3>
+                            </div>
+                            <span class="badge" id="pestSeverityBadge">None</span>
+                        </div>
+
+                        <div class="pest-summary" id="pestSummaryBox">
+                            <p id="pestSummaryText">Evaluating edge perforations and leaf mining galleries.</p>
+                        </div>
+
+                        <div class="pest-culprits" id="pestCulpritsContainer">
+                            <strong data-i18n="label_culprits">Possible Culprits / Vectors:</strong>
+                            <div class="culprit-tags" id="culpritTags">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
+                        <div class="ipm-section">
+                            <h4 data-i18n="ipm_heading">Integrated Pest Management (IPM) Guidance</h4>
+                            <ul class="bullet-list" id="ipmList">
+                                <!-- Populated dynamically -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Treatment & Prevention Tabs -->
+                    <div class="card guidance-card">
+                        <div class="tabs-header">
+                            <button class="tab-btn active" data-tab="tab-organic" data-i18n="tab_organic">🌱 Organic & Bio Solutions</button>
+                            <button class="tab-btn" data-tab="tab-prevention" data-i18n="tab_prevention">🛡️ Cultural Prevention</button>
+                            <button class="tab-btn" data-tab="tab-chemical" data-i18n="tab_chemical">🧪 Chemical Treatment</button>
+                        </div>
+
+                        <div class="tab-content active" id="tab-organic">
+                            <h4 data-i18n="organic_heading">Eco-Friendly & Organic Treatments</h4>
+                            <ul class="bullet-list" id="organicTreatmentsList"></ul>
+                        </div>
+
+                        <div class="tab-content" id="tab-prevention">
+                            <h4 data-i18n="prevention_heading">Long-Term Prevention Practices</h4>
+                            <ul class="bullet-list" id="preventionList"></ul>
+                        </div>
+
+                        <div class="tab-content" id="tab-chemical">
+                            <div class="chemical-alert">
+                                <strong>⚠️ <span data-i18n="chemical_alert">Precaution Notice: Chemical treatments should only be used as a last resort when threshold damage is reached. Always wear protective gear and follow pre-harvest intervals.</span></strong>
+                            </div>
+                            <ul class="bullet-list" id="chemicalTreatmentsList"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Model Transparency & Agricultural Disclaimer -->
+                    <div class="card transparency-card">
+                        <div class="transparency-header">
+                            <span class="shield-icon">🛡️</span>
+                            <div>
+                                <h4 data-i18n="transparency_heading">Diagnostic Model Transparency & Legal Disclaimer</h4>
+                                <p class="transparency-subtext" id="modelHonestyText">
+                                    Engine: Multimodal AI Vision & Diagnostic Reasoning System
+                                </p>
+                            </div>
+                        </div>
+                        <p class="disclaimer-text" id="disclaimerText">
+                            Notice: PlantGuard AI diagnostic predictions are computer-assisted educational estimates and are not guaranteed. Environmental conditions, shadow effects, and non-foliage artifacts can influence certainty. For commercial farming or severe disease outbreaks, please verify findings with your local agricultural university extension or certified crop advisor.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="container footer-content">
+            <p>🌿 <strong data-i18n="footer_brand">PlantGuard AI</strong> • <span data-i18n="footer_tech">Built with Python, Flask, and Plant Pathology Science</span></p>
+            <p class="footer-note" data-i18n="footer_note">Crafted for agricultural sustainability and transparent pair programming.</p>
+        </div>
+    </footer>
+
+    <script src="/static/js/translations.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

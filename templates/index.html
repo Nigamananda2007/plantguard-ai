@@ -19,6 +19,16 @@
                     <p class="brand-subtitle" data-i18n="brand_subtitle">Smart Crop Disease & Pest Damage Diagnostic Lab</p>
                 </div>
             </div>
+            <nav class="app-nav" aria-label="Main Navigation">
+                <a href="/" class="nav-link active" id="navLabLink">
+                    <span class="nav-icon">🔬</span>
+                    <span data-i18n="nav_lab">Diagnostic Lab</span>
+                </a>
+                <a href="/chat" class="nav-link" id="navChatLink">
+                    <span class="nav-icon">💬</span>
+                    <span data-i18n="nav_chat">Plant AI Chat</span>
+                </a>
+            </nav>
             <div class="header-status">
                 <div class="status-badge" id="modelStatusBadge">
                     <span class="status-dot green" id="statusDot"></span>
@@ -319,6 +329,48 @@
                         </div>
                     </div>
 
+                    <!-- Report Follow-up AI Chat Card -->
+                    <div class="card report-chat-card" id="reportChatCard">
+                        <div class="card-header report-chat-header">
+                            <div class="header-with-tag">
+                                <span class="tag-label tag-chat" data-i18n="tag_report_chat">AI Agronomist Follow-up</span>
+                                <h3 data-i18n="report_chat_title">Ask Follow-up Questions About This Report</h3>
+                                <p class="report-chat-desc" data-i18n="report_chat_subtitle">Have questions about symptoms, organic remedies, prevention, or next steps for this diagnosed issue? Ask below:</p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="reportChatResetBtn" title="Reset chat history" data-i18n="btn_reset_chat">↺ Reset Chat</button>
+                        </div>
+
+                        <!-- Report Context Pill -->
+                        <div class="report-context-pill" id="reportChatContextPill">
+                            <span class="context-pill-icon">📋</span>
+                            <span class="context-pill-text" id="reportChatContextText">Connected to Current Diagnostic Report</span>
+                        </div>
+
+                        <!-- Suggested Quick Prompts based on report -->
+                        <div class="chat-quick-suggestions" id="reportChatSuggestions">
+                            <!-- Populated dynamically -->
+                        </div>
+
+                        <!-- Messages Container -->
+                        <div class="chat-messages-container report-chat-messages" id="reportChatMessages" role="log" aria-live="polite">
+                            <!-- Populated dynamically -->
+                        </div>
+
+                        <!-- Input Form -->
+                        <form class="chat-input-form" id="reportChatForm">
+                            <div class="chat-input-wrapper">
+                                <input type="text" id="reportChatInput" class="chat-input" placeholder="Ask a follow-up question about this diagnosis..." data-i18n-placeholder="report_chat_placeholder" autocomplete="off" maxlength="1000">
+                                <button type="submit" class="btn btn-primary chat-send-btn" id="reportChatSendBtn" aria-label="Send message">
+                                    <span class="send-btn-text" data-i18n="btn_send">Send</span>
+                                    <span class="send-icon">➤</span>
+                                </button>
+                            </div>
+                        </form>
+                        <div class="chat-guidance-footer">
+                            <small data-i18n="chat_disclaimer_note">⚠️ Agricultural educational guidance only. Always follow product labels and local agronomist recommendations.</small>
+                        </div>
+                    </div>
+
                     <!-- Model Transparency & Agricultural Disclaimer -->
                     <div class="card transparency-card">
                         <div class="transparency-header">
@@ -351,7 +403,77 @@
         </div>
     </footer>
 
+    <!-- Persistent Floating AI Assistant Button (Visible throughout Website) -->
+    <button type="button" class="floating-assistant-btn" id="aiAssistantFloatingBtn" aria-label="Open PlantGuard AI Assistant" title="Open AI Assistant (Ask any question)">
+        <span class="floating-btn-pulse"></span>
+        <span class="floating-btn-icon">💬</span>
+        <span class="floating-btn-text" data-i18n="floating_assistant_btn">AI Assistant</span>
+    </button>
+
+    <!-- ChatGPT-Style Floating AI Assistant Panel / Drawer -->
+    <div class="ai-chat-panel hidden" id="aiAssistantPanel" role="dialog" aria-labelledby="aiPanelTitle" aria-modal="true">
+        <!-- Panel Header -->
+        <div class="ai-panel-header">
+            <div class="ai-panel-brand">
+                <span class="ai-panel-avatar">🤖</span>
+                <div class="ai-panel-title-group">
+                    <h3 class="ai-panel-title" id="aiPanelTitle" data-i18n="assistant_panel_title">PlantGuard AI Assistant</h3>
+                    <div class="ai-panel-status">
+                        <span class="status-dot green" id="aiPanelStatusDot"></span>
+                        <span class="ai-panel-status-text" id="aiPanelStatusText" data-i18n="assistant_panel_status">ChatGPT-Style AI</span>
+                    </div>
+                </div>
+            </div>
+            <div class="ai-panel-actions">
+                <button type="button" class="panel-action-btn" id="aiPanelNewChatBtn" title="Start a fresh conversation" data-i18n-title="btn_new_chat">
+                    <span data-i18n="btn_new_chat">+ New Chat</span>
+                </button>
+                <a href="/chat" class="panel-action-btn panel-expand-btn" id="aiPanelFullPageLink" title="Open Full Screen Chat" data-i18n-title="btn_open_full_chat">
+                    <span data-i18n="btn_open_full_chat">Full Page ⤢</span>
+                </a>
+                <button type="button" class="panel-action-btn panel-close-btn" id="aiPanelCloseBtn" title="Close Panel" aria-label="Close Panel">
+                    <span>✕</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel Subtitle Notice -->
+        <div class="ai-panel-notice">
+            <span class="notice-icon">✨</span>
+            <span class="notice-text" data-i18n="assistant_panel_subtitle">Ask ANY question — general knowledge, science, coding, everyday topics, or plant health</span>
+        </div>
+
+        <!-- Panel Quick Suggestions -->
+        <div class="ai-panel-suggestions" id="aiPanelSuggestions">
+            <button type="button" class="quick-chip" data-prompt-key="chat_chip_1">What is artificial intelligence (AI)?</button>
+            <button type="button" class="quick-chip" data-prompt-key="chat_chip_2">How does photosynthesis work in plants?</button>
+            <button type="button" class="quick-chip" data-prompt-key="chat_chip_3">How do I prevent tomato blight organically?</button>
+            <button type="button" class="quick-chip" data-prompt-key="chat_chip_4">Best organic remedy for aphids & sucking pests</button>
+        </div>
+
+        <!-- Panel Message Log -->
+        <div class="ai-panel-messages" id="aiPanelMessages" role="log" aria-live="polite">
+            <!-- Messages populated dynamically -->
+        </div>
+
+        <!-- Panel Input Form -->
+        <form class="ai-panel-form" id="aiPanelForm">
+            <div class="ai-panel-input-wrapper">
+                <textarea id="aiPanelInput" class="ai-panel-input" placeholder="Ask anything in English or ଓଡ଼ିଆ..." data-i18n-placeholder="assistant_input_placeholder" rows="1" maxlength="1000" autocomplete="off"></textarea>
+                <button type="submit" class="btn btn-primary ai-panel-send-btn" id="aiPanelSendBtn" aria-label="Send message">
+                    <span class="send-icon">➤</span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Panel Footer -->
+        <div class="ai-panel-footer">
+            <small data-i18n="assistant_disclaimer">PlantGuard AI can make mistakes. Verify important advice.</small>
+        </div>
+    </div>
+
     <script src="/static/js/translations.js"></script>
     <script src="/static/js/app.js"></script>
+    <script src="/static/js/ai_assistant.js"></script>
 </body>
 </html>

@@ -18,6 +18,7 @@ from services.image_validator import validate_image_file
 from services.disease_engine import DiseaseClassifier
 from services.pest_engine import PestDamageAnalyzer
 from services.gemini_vision_service import GeminiVisionService
+from services.gemini_chat_service import GeminiChatService
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024  # 6 MB max payload
@@ -31,12 +32,19 @@ SAMPLE_DIR = os.path.join(BASE_DIR, "static", "samples")
 disease_classifier = DiseaseClassifier()
 pest_analyzer = PestDamageAnalyzer()
 gemini_service = GeminiVisionService()
+gemini_chat_service = GeminiChatService()
 
 
 @app.route("/")
 def index():
     """Serves the main PlantGuard AI dashboard interface."""
     return render_template("index.html")
+
+
+@app.route("/chat")
+def chat_page():
+    """Serves the standalone PlantGuard AI Agricultural Chat interface."""
+    return render_template("chat.html")
 
 
 @app.route("/api/health", methods=["GET"])
@@ -46,9 +54,113 @@ def health_check():
         "status": "healthy",
         "service": "PlantGuard AI",
         "real_ai_configured": gemini_service.is_available(),
+        "vision_model": getattr(gemini_service, "model_name", "gemini-3.8-flash"),
+        "chat_ai_configured": gemini_chat_service.is_available(),
+        "chat_model": gemini_chat_service.model_name,
         "active_engine": "Google Gemini Vision AI" if gemini_service.is_available() else disease_classifier.model_type,
         "pest_engine": pest_analyzer.method_name,
         "sample_dir_exists": os.path.exists(SAMPLE_DIR)
+    })
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat_endpoint():
+    """
+    Secure endpoint for Agricultural AI Chat queries.
+    Accepts user message, optional conversation history, optional report context,
+    and target language ('en', 'or', 'hi').
+    Strictly keeps API keys on the server and provides safe agricultural guidance.
+    """
+    if not request.is_json:
+        return jsonify({"success": False, "error": "Request body must be valid JSON."}), 400
+
+    data = request.get_json(silent=True)
+    if data is None or not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Invalid JSON payload provided."}), 400
+
+    message = data.get("message")
+    if not message or not isinstance(message, str) or not message.strip():
+        return jsonify({"success": False, "error": "Message is required and cannot be empty."}), 400
+
+    message = message.strip()
+    if len(message) > 1000:
+        return jsonify({"success": False, "error": "Message exceeds the maximum limit of 1000 characters."}), 400
+
+    # Validate language
+    language = data.get("language", "en")
+    if language not in ("en", "or", "hi"):
+        language = "en"
+
+    # Validate and sanitize conversation history
+    raw_history = data.get("history", [])
+    history = []
+    if isinstance(raw_history, list):
+        for item in raw_history[:10]:  # Limit to 10 recent messages
+            if isinstance(item, dict):
+                role = str(item.get("role", "user")).strip().lower()
+                text = str(item.get("text") or item.get("content") or "").strip()
+                if role in ("user", "model", "assistant") and text and len(text) <= 1500:
+                    history.append({"role": role, "text": text})
+
+    # Optional leaf report context for follow-up questions
+    raw_context = data.get("report_context")
+    report_context = None
+    if isinstance(raw_context, dict):
+        report_context = {
+            "crop": str(raw_context.get("crop", ""))[:100],
+            "condition": str(raw_context.get("condition", ""))[:150],
+            "confidence": raw_context.get("confidence", "N/A"),
+            "severity": str(raw_context.get("severity", ""))[:50],
+            "pathogen": str(raw_context.get("pathogen", ""))[:150],
+            "symptoms": [str(s)[:150] for s in raw_context.get("symptoms", []) if isinstance(s, (str, int, float))][:10],
+            "pest_damage": raw_context.get("pest_damage") if isinstance(raw_context.get("pest_damage"), dict) else {},
+            "organic_treatment": [str(t)[:250] for t in raw_context.get("organic_treatment", []) if isinstance(t, str)][:10],
+            "chemical_treatment": [str(t)[:250] for t in raw_context.get("chemical_treatment", []) if isinstance(t, str)][:10],
+            "prevention": [str(p)[:250] for p in raw_context.get("prevention", []) if isinstance(p, str)][:10]
+        }
+
+    # Verify Gemini API key configuration
+    if not gemini_chat_service.is_available():
+        if language == "or":
+            missing_msg = "ସର୍ଭରରେ Google Gemini API Key କନଫିଗର୍ ହୋଇନାହିଁ। ବାସ୍ତବ AI ଆସିଷ୍ଟାଣ୍ଟ ସହିତ କଥା ହେବା ପାଇଁ .env ଫାଇଲ୍ ରେ GEMINI_API_KEY ଯୋଡ଼ନ୍ତୁ।"
+            disclaimer_msg = "PlantGuard AI କୃଷି ଓ ସାଧାରଣ ଶିକ୍ଷଣୀୟ ମାର୍ଗଦର୍ଶନ ପାଇଁ ଉଦ୍ଦିଷ୍ଟ।"
+        elif language == "hi":
+            missing_msg = "सर्वर पर Google Gemini API Key कॉन्फ़िगर नहीं है। लाइव AI चैट सक्षम करने के लिए .env फ़ाइल में GEMINI_API_KEY जोड़ें।"
+            disclaimer_msg = "PlantGuard AI कृषि एवं सामान्य शैक्षिक मार्गदर्शन हेतु समर्पित है।"
+        else:
+            missing_msg = "Gemini API key is not configured on the server. Please add GEMINI_API_KEY to your server environment or .env file to enable live AI chat."
+            disclaimer_msg = "PlantGuard AI advice is intended for educational and decision support guidance."
+
+        return jsonify({
+            "success": False,
+            "error": missing_msg,
+            "api_key_missing": True,
+            "disclaimer": disclaimer_msg
+        }), 503
+
+    # Execute Gemini Chat query
+    reply, err = gemini_chat_service.chat(
+        message=message,
+        history=history,
+        report_context=report_context,
+        language=language
+    )
+
+    if err:
+        return jsonify({
+            "success": False,
+            "error": err,
+            "api_key_missing": False,
+            "can_retry": True
+        }), 502
+
+    return jsonify({
+        "success": True,
+        "reply": reply,
+        "language": language,
+        "model": gemini_chat_service.model_name,
+        "has_report_context": bool(report_context),
+        "disclaimer": "PlantGuard AI advice is intended for educational agricultural guidance. Always follow pesticide product labels and consult local agricultural extension officers."
     })
 
 
@@ -150,6 +262,7 @@ def analyze_image():
         metadata["is_sample"] = False
         mime_type = "image/png" if meta.get("format") == "PNG" else "image/jpeg"
 
+    api_error = None
     try:
         # 1. Attempt Real Gemini Vision AI Analysis if API key is configured
         if gemini_service.is_available():
@@ -258,19 +371,28 @@ def analyze_image():
         pest_result = pest_analyzer.analyze_pest_damage(image_bytes, metadata, language=language)
 
         if language == "or":
-            fallback_notice = "ବଟାନିକାଲ୍ ଫଲବ୍ୟାକ୍ ମୋଡ୍ ରେ ଚାଲୁଛି। ବାସ୍ତବ AI ପାଇଁ .env ରେ GEMINI_API_KEY ଯୋଡ଼ନ୍ତୁ।"
+            if api_error:
+                fallback_notice = f"ଗୁଗୁଲ୍ ଜେମିନାଇ AI ଅସ୍ଥାୟୀ ଭାବେ ଅନୁପଲବ୍ଧ ({api_error})। ସୁରକ୍ଷିତ ବଟାନିକାଲ୍ ଫଲବ୍ୟାକ୍ ମୋଡ୍ ବ୍ୟବହୃତ ହୋଇଛି।"
+            else:
+                fallback_notice = "ବଟାନିକାଲ୍ ଫଲବ୍ୟାକ୍ ମୋଡ୍ ରେ ଚାଲୁଛି। ବାସ୍ତବ AI ପାଇଁ .env ରେ GEMINI_API_KEY ଯୋଡ଼ନ୍ତୁ।"
             disclaimer = (
                 "ସୂଚନା: PlantGuard AI ର ଏହି ଫଳାଫଳ କେବଳ ଚାଷୀ ଭାଇଙ୍କ ମାର୍ଗଦର୍ଶନ ପାଇଁ ଏକ କମ୍ପ୍ୟୁଟର ଆକଳନ। "
                 "କ୍ୟାମେରାର ଆଲୋକ ଓ ଫଟୋ କୋଣ ଯୋଗୁଁ ନିର୍ଭୁଲତାରେ ପାର୍ଥକ୍ୟ ଆସିପାରେ, ଏହା ୧୦୦% ଗ୍ୟାରେଣ୍ଟି ନୁହେଁ। "
                 "କୌଣସି ରାସାୟନିକ ବିଷ ସିଞ୍ଚନ ପୂର୍ବରୁ ନିକଟସ୍ଥ କୃଷି ଅଧିକାରୀଙ୍କ ପରାମର୍ଶ ନିଅନ୍ତୁ।"
             )
         elif language == "hi":
-            fallback_notice = "बॉटनिकल फॉलबैक मोड में सक्रिय। वास्तविक AI के लिए .env में GEMINI_API_KEY जोड़ें।"
+            if api_error:
+                fallback_notice = f"गूगल जेमिनी AI अस्थायी रूप से अनुपलब्ध ({api_error})। सुरक्षित बॉटनिकल फॉलबैक मोड उपयोग किया गया है।"
+            else:
+                fallback_notice = "बॉटनिकल फॉलबैक मोड में सक्रिय। वास्तविक AI के लिए .env में GEMINI_API_KEY जोड़ें।"
             disclaimer = (
                 "सूचना: PlantGuard AI के परिणाम कंप्यूटर-आधारित शैक्षिक अनुमान हैं। रासायनिक छिड़काव से पहले स्थानीय कृषि विशेषज्ञ से सलाह अवश्य लें।"
             )
         else:
-            fallback_notice = "Running in botanical heuristic fallback mode. Add GEMINI_API_KEY in .env for real multimodal AI."
+            if api_error:
+                fallback_notice = f"Gemini Vision AI temporarily unavailable ({api_error}). Running in safe botanical fallback mode."
+            else:
+                fallback_notice = "Running in botanical heuristic fallback mode. Add GEMINI_API_KEY in .env for real multimodal AI."
             disclaimer = (
                 "Notice: PlantGuard AI diagnostic results are intended for guidance and decision support. "
                 "Because environmental lighting and visual similarities can influence confidence, "
@@ -281,6 +403,8 @@ def analyze_image():
             "success": True,
             "is_real_ai": False,
             "fallback_notice": fallback_notice,
+            "api_error": api_error,
+            "can_retry_ai": bool(api_error and gemini_service.is_available()),
             "metadata": metadata,
             "disease_prediction": disease_result,
             "pest_analysis": pest_result,

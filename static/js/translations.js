@@ -120,6 +120,53 @@ const translations = {
         sev_high: "High",
         sev_critical: "Severe / Critical",
 
+        // Navigation
+        nav_lab: "Diagnostic Lab",
+        nav_chat: "Plant AI Chat",
+
+        // Standalone AI Chat Page & Assistant
+        chat_page_title: "PlantGuard AI Assistant",
+        chat_page_subtitle: "ChatGPT-style AI Assistant — Ask ANY question on science, coding, history, general knowledge, or crop diseases and plant care.",
+        btn_new_chat: "+ New Chat",
+        btn_reset_chat: "↺ Reset Chat",
+        btn_send: "Send",
+        chat_input_placeholder: "Ask any question in English, ଓଡ଼ିଆ, or हिन्दी...",
+        chat_disclaimer_note: "⚠️ PlantGuard AI provides general knowledge & agricultural guidance. Always verify critical recommendations.",
+        chat_missing_key_warning: "⚠️ Gemini API key is not configured on the server. Please add GEMINI_API_KEY in the server .env file to enable live AI chat.",
+        chat_typing: "PlantGuard AI is thinking...",
+        chat_initial_greeting: "Hello! I am your PlantGuard AI Assistant. You can ask me ANY question — general knowledge, science, mathematics, coding, history, or plant health and gardening in English & Odia. How can I help you today?",
+        chat_error_prefix: "Error:",
+        chat_retry: "Retry",
+        retry_ai_analysis: "🔄 Retry Real AI Vision Analysis",
+        temporary_error_retry_prompt: "Gemini AI temporarily unavailable (high demand or rate limit). Click below to retry:",
+
+        // Persistent Floating Assistant Widget
+        floating_assistant_btn: "AI Assistant",
+        assistant_panel_title: "PlantGuard AI Assistant",
+        assistant_panel_subtitle: "Ask ANY question — general knowledge, science, everyday topics, or plant health",
+        assistant_panel_status: "ChatGPT-Style AI",
+        assistant_welcome_greeting: "Hello! I am your PlantGuard AI Assistant. You can ask me ANY question — from science, coding, and history to crop health, organic remedies, and gardening in English & Odia. How can I help you today?",
+        assistant_input_placeholder: "Ask anything in English or ଓଡ଼ିଆ...",
+        assistant_disclaimer: "PlantGuard AI can make mistakes. Verify important advice.",
+        btn_open_full_chat: "Full Page ⤢",
+        btn_close_panel: "Close",
+
+        // Quick suggestions for standalone chat & floating widget
+        chat_chip_1: "What is artificial intelligence (AI)?",
+        chat_chip_2: "How does photosynthesis work in plants?",
+        chat_chip_3: "How do I prevent tomato blight organically?",
+        chat_chip_4: "Best organic remedy for aphids & sucking pests",
+
+        // Report Follow-up Chat specific
+        tag_report_chat: "AI Agronomist Follow-up",
+        report_chat_title: "Ask Follow-up Questions About This Report",
+        report_chat_subtitle: "Have questions about symptoms, organic remedies, prevention, or next steps for this diagnosed issue? Ask below:",
+        report_chat_placeholder: "Ask a follow-up question about this diagnosis...",
+        report_chip_1: "How fast will this condition spread?",
+        report_chip_2: "Can I use organic neem spray for this?",
+        report_chip_3: "What immediate action should I take today?",
+        report_chip_4: "How should I adjust watering now?",
+
         // Footer
         footer_brand: "PlantGuard AI",
         footer_tech: "Built with Python, Flask, and Plant Pathology Science",
@@ -242,6 +289,53 @@ const translations = {
         sev_high: "ଅଧିକ (High)",
         sev_critical: "ଅତ୍ୟନ୍ତ ଗୁରୁତର (Critical)",
 
+        // Navigation
+        nav_lab: "ପତ୍ର ରୋଗ ପରୀକ୍ଷାଗାର",
+        nav_chat: "କୃଷି AI ଚାଟ୍",
+
+        // Standalone AI Chat Page & Assistant
+        chat_page_title: "ପ୍ଲାଣ୍ଟଗାର୍ଡ AI ସହାୟକ",
+        chat_page_subtitle: "ChatGPT-ଶୈଳୀ AI ସହାୟକ — ବିଜ୍ଞାନ, କୋଡିଂ, ଇତିହାସ, ସାଧାରଣ ଜ୍ଞାନ କିମ୍ବା ଫସଲ ରୋଗ ଓ ଗଛ ଯତ୍ନ ବିଷୟରେ ଯେକୌଣସି ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ।",
+        btn_new_chat: "+ ନୂତନ ଚାଟ୍",
+        btn_reset_chat: "↺ ପୁନର୍ବାର ଆରମ୍ଭ",
+        btn_send: "ପଠାନ୍ତୁ",
+        chat_input_placeholder: "ଓଡ଼ିଆ କିମ୍ବା ଇଂରାଜୀରେ ଯେକୌଣସି ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ...",
+        chat_disclaimer_note: "⚠️ ଏହା କେବଳ ସାଧାରଣ ଶିକ୍ଷା ଓ ମାର୍ଗଦର୍ଶନ ପାଇଁ। ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ ସୂଚନା ଯାଞ୍ଚ କରିବା ଉଚିତ।",
+        chat_missing_key_warning: "⚠️ ସର୍ଭରରେ Gemini API Key କନଫିଗର୍ ହୋଇନାହିଁ। ଲାଇଭ୍ AI ଚାଟ୍ ପାଇଁ ଦୟାକରି .env ଫାଇଲ୍ ରେ GEMINI_API_KEY ଯୋଡ଼ନ୍ତୁ।",
+        chat_typing: "ପ୍ଲାଣ୍ଟଗାର୍ଡ AI ଉତ୍ତର ପ୍ରସ୍ତୁତ କରୁଛି...",
+        chat_initial_greeting: "ନମସ୍କାର! ମୁଁ ଆପଣଙ୍କ ପ୍ଲାଣ୍ଟଗାର୍ଡ AI ସହାୟକ। ଆପଣ ମୋତେ ଯେକୌଣସି ପ୍ରଶ୍ନ ପଚାରିପାରିବେ — ସାଧାରଣ ଜ୍ଞାନ, ବିଜ୍ଞାନ, କୋଡିଂ, ଇତିହାସଠାରୁ ଆରମ୍ଭ କରି ଫସଲ ରୋଗ, ଜୈବିକ ଉପଚାର ଓ ଗଛ ଯତ୍ନ ପର୍ଯ୍ୟନ୍ତ। ଆଜି ମୁଁ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବି?",
+        chat_error_prefix: "ତ୍ରୁଟି:",
+        chat_retry: "ପୁନଃଚେଷ୍ଟା କରନ୍ତୁ",
+        retry_ai_analysis: "🔄 ବାସ୍ତବ AI ବିଶ୍ଳେଷଣ ପୁନର୍ବାର ଚେଷ୍ଟା କରନ୍ତୁ",
+        temporary_error_retry_prompt: "ଜେମିନାଇ AI ଅସ୍ଥାୟୀ ଭାବେ ବ୍ୟସ୍ତ (ଅଧିକ ଚାପ ବା ରେଟ୍ ଲିମିଟ୍)। ପୁନର୍ବାର ଚେଷ୍ଟା କରିବାକୁ କ୍ଲିକ୍ କରନ୍ତୁ:",
+
+        // Persistent Floating Assistant Widget
+        floating_assistant_btn: "AI ସହାୟକ",
+        assistant_panel_title: "ପ୍ଲାଣ୍ଟଗାର୍ଡ AI ସହାୟକ",
+        assistant_panel_subtitle: "ଯେକୌଣସି ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ — ସାଧାରଣ ଜ୍ଞାନ, ବିଜ୍ଞାନ, କୋଡିଂ କିମ୍ବା ଫସଲ ଯତ୍ନ",
+        assistant_panel_status: "ChatGPT-ଶୈଳୀ AI",
+        assistant_welcome_greeting: "ନମସ୍କାର! ମୁଁ ଆପଣଙ୍କ ପ୍ଲାଣ୍ଟଗାର୍ଡ AI ସହାୟକ। ଆପଣ ମୋତେ ଯେକୌଣସି ପ୍ରଶ୍ନ ପଚାରିପାରିବେ — ସାଧାରଣ ଜ୍ଞାନ, ବିଜ୍ଞାନ, ଇତିହାସଠାରୁ ଆରମ୍ଭ କରି ଫସଲ ରୋଗ, ଜୈବିକ ଉପଚାର ଓ ଗଛ ଯତ୍ନ ପର୍ଯ୍ୟନ୍ତ। ଆଜି ମୁଁ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବି?",
+        assistant_input_placeholder: "ଇଂରାଜୀ ବା ଓଡ଼ିଆରେ ଯେକୌଣସି ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ...",
+        assistant_disclaimer: "PlantGuard AI ଦ୍ୱାରା ପ୍ରଦତ୍ତ ସୂଚନା ଯାଞ୍ଚ କରିବା ଉଚିତ।",
+        btn_open_full_chat: "ପୂରା ପେଜ୍ ⤢",
+        btn_close_panel: "ବନ୍ଦ କରନ୍ତୁ",
+
+        // Quick suggestions for standalone chat & floating widget
+        chat_chip_1: "କୃତ୍ରିମ ବୁଦ୍ଧିମତ୍ତା (AI) କ’ଣ ଏବଂ କିପରି କାମ କରେ?",
+        chat_chip_2: "ଉଦ୍ଭିଦ କିପରି ଆଲୋକଶ୍ଳେଷଣ ପ୍ରକ୍ରିୟାରେ ଖାଦ୍ୟ ପ୍ରସ୍ତୁତ କରେ?",
+        chat_chip_3: "ବିଲାତିରେ ଝାଉଁଳା ରୋଗ ଜୈବିକ ଉପାୟରେ କିପରି ରୋକିବି?",
+        chat_chip_4: "ଘର ବଗିଚା ପାଇଁ ସର୍ବୋତ୍ତମ ଜୈବିକ ଖତ କ’ଣ?",
+
+        // Report Follow-up Chat specific
+        tag_report_chat: "AI ବିଶେଷଜ୍ଞ ପରାମର୍ଶ",
+        report_chat_title: "ଏହି ରିପୋର୍ଟ ସମ୍ପର୍କରେ ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ",
+        report_chat_subtitle: "ଏହି ରୋଗ ବା କୀଟର ଚିକିତ୍ସା, ପ୍ରତିରୋଧ କିମ୍ବା ଆଗାମୀ ପଦକ୍ଷେପ ବିଷୟରେ ପଚାରନ୍ତୁ:",
+        report_chat_placeholder: "ଏହି ପରୀକ୍ଷା ରିପୋର୍ଟ ବିଷୟରେ ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ...",
+        report_chip_1: "ଏହି ରୋଗ କେତେ ଶୀଘ୍ର ବ୍ୟାପିପାରେ?",
+        report_chip_2: "ଏଥିପାଇଁ ନିମ୍ବ ତେଲ ବ୍ୟବହାର କରିପାରିବି କି?",
+        report_chip_3: "ଆଜି ତୁରନ୍ତ ମୋତେ କ’ଣ କରିବାକୁ ହେବ?",
+        report_chip_4: "ବର୍ତ୍ତମାନ କେତେ ଦିନରେ ପାଣି ଦେବା ଉଚିତ୍?",
+
         // Footer
         footer_brand: "ପ୍ଲାଣ୍ଟଗାର୍ଡ AI (PlantGuard AI)",
         footer_tech: "Python, Flask ଏବଂ ଉଦ୍ଭିଦ ବିଜ୍ଞାନ ଉପରେ ଆଧାରିତ",
@@ -363,6 +457,53 @@ const translations = {
         sev_moderate: "मध्यम (Moderate)",
         sev_high: "उच्च (High)",
         sev_critical: "अति गंभीर (Critical)",
+
+        // Navigation
+        nav_lab: "पत्ती रोग निदान लैब",
+        nav_chat: "कृषि AI चैट",
+
+        // Standalone AI Chat Page & Assistant
+        chat_page_title: "प्लांटगार्ड AI सहायक",
+        chat_page_subtitle: "ChatGPT-शैली AI सहायक — विज्ञान, कोडिंग, इतिहास, सामान्य ज्ञान या फसल रोग व पौधों की देखभाल पर कोई भी प्रश्न पूछें।",
+        btn_new_chat: "+ नई बातचीत",
+        btn_reset_chat: "↺ रीसेट",
+        btn_send: "भेजें",
+        chat_input_placeholder: "हिन्दी या अंग्रेजी में कोई भी प्रश्न पूछें...",
+        chat_disclaimer_note: "⚠️ यह सामान्य शिक्षा और निर्णय मार्गदर्शन हेतु है। महत्वपूर्ण जानकारी की पुष्टि करें।",
+        chat_missing_key_warning: "⚠️ सर्वर पर Gemini API Key कॉन्फ़िगर नहीं है। लाइव AI चैट के लिए कृपया .env फ़ाइल में GEMINI_API_KEY जोड़ें।",
+        chat_typing: "प्लांटगार्ड AI सोच रहा है...",
+        chat_initial_greeting: "नमस्ते! मैं आपका प्लांटगार्ड AI सहायक हूँ। आप मुझसे कोई भी प्रश्न पूछ सकते हैं — सामान्य ज्ञान, विज्ञान, गणित, कोडिंग, इतिहास से लेकर फसल रोग, जैविक उपचार और बागवानी तक। आज मैं आपकी क्या सहायता कर सकता हूँ?",
+        chat_error_prefix: "त्रुटि:",
+        chat_retry: "पुनः प्रयास करें",
+        retry_ai_analysis: "🔄 वास्तविक AI विश्लेषण पुनः प्रयास करें",
+        temporary_error_retry_prompt: "जेमिनी AI अस्थायी रूप से व्यस्त है। पुनः प्रयास करने के लिए नीचे क्लिक करें:",
+
+        // Persistent Floating Assistant Widget
+        floating_assistant_btn: "AI सहायक",
+        assistant_panel_title: "प्लांटगार्ड AI सहायक",
+        assistant_panel_subtitle: "कोई भी सवाल पूछें — सामान्य ज्ञान, विज्ञान, कोडिंग या पौधों की देखभाल",
+        assistant_panel_status: "ChatGPT-शैली AI",
+        assistant_welcome_greeting: "नमस्ते! मैं आपका प्लांटगार्ड AI सहायक हूँ। आप मुझसे कोई भी प्रश्न पूछ सकते हैं — सामान्य ज्ञान, विज्ञान, कोडिंग से लेकर फसल रोग और बागवानी तक। आज मैं आपकी क्या सहायता कर सकता हूँ?",
+        assistant_input_placeholder: "अंग्रेजी या हिन्दी में कुछ भी पूछें...",
+        assistant_disclaimer: "PlantGuard AI गलतियां कर सकता है। महत्वपूर्ण जानकारी की पुष्टि करें।",
+        btn_open_full_chat: "पूरा पेज ⤢",
+        btn_close_panel: "बंद करें",
+
+        // Quick suggestions for standalone chat & floating widget
+        chat_chip_1: "आर्टिफिशियल इंटेलिजेंस (AI) क्या है और कैसे काम करता है?",
+        chat_chip_2: "पौधे प्रकाश संश्लेषण द्वारा भोजन कैसे बनाते हैं?",
+        chat_chip_3: "टमाटर में झुलसा रोग की जैविक रोकथाम कैसे करें?",
+        chat_chip_4: "घर के बगीचे के लिए सबसे अच्छी जैविक खाद क्या है?",
+
+        // Report Follow-up Chat specific
+        tag_report_chat: "AI विशेषज्ञ परामर्श",
+        report_chat_title: "इस रिपोर्ट के बारे में सवाल पूछें",
+        report_chat_subtitle: "इस बीमारी या कीट के उपचार, रोकथाम या लक्षणों के बारे में पूछें:",
+        report_chat_placeholder: "इस रिपोर्ट के बारे में कोई सवाल पूछें...",
+        report_chip_1: "यह बीमारी कितनी तेज़ी से फैल सकती है?",
+        report_chip_2: "क्या इसके लिए नीम का तेल प्रयोग कर सकते हैं?",
+        report_chip_3: "आज तुरंत क्या कदम उठाना चाहिए?",
+        report_chip_4: "अब पानी कितने दिन में देना चाहिए?",
 
         // Footer
         footer_brand: "प्लांटगार्ड AI (PlantGuard AI)",

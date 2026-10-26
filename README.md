@@ -9,7 +9,7 @@
 **PlantGuard AI** is a portfolio-grade, multilingual web application engineered to assist farmers, agricultural students, and agronomists in identifying plant leaf diseases, diagnosing pest damage, and generating problem-specific remedies.
 
 The application features a **Real AI & Graceful Fallback Hybrid Architecture**:
-1. **Real Multimodal AI Vision & Diagnostic Reasoning (Google Gemini 2.5 Flash)**: When an API key is configured, analyzes leaf imagery for fungal/bacterial diseases, chewing holes, leaf miners, stippling, and nutritional chlorosis, synthesizing user field context into honest, problem-specific treatments.
+1. **Real Multimodal AI Vision & Diagnostic Reasoning (Google Gemini 3.8 Flash)**: When an API key is configured, analyzes leaf imagery for fungal/bacterial diseases, chewing holes, leaf miners, stippling, and nutritional chlorosis, synthesizing user field context into honest, problem-specific treatments.
 2. **Validated Botanical Heuristic Fallback Engine**: If no API key is present or quota is exhausted, automatically falls back to morphological leaf perforation and botanical colorimetric analysis.
 3. **Strict AI Model Honesty**: Transparent status badges in the UI and JSON payload clearly distinguish real AI inferences from fallback/demo calculations.
 4. **Trilingual Support**: Full localized interface available in **English**, **Odia (ଓଡ଼ିଆ)**, and **Hindi (हिन्दी)** with persistent `localStorage` selection.

@@ -15,7 +15,8 @@ load_dotenv()
 
 
 class GeminiVisionService:
-    def __init__(self):
+    def __init__(self, model_name=None):
+        self.model_name = model_name or os.getenv("GEMINI_VISION_MODEL", "gemini-3.8-flash")
         self.api_key = os.getenv("GEMINI_API_KEY", "").strip()
         self.client = None
         self._init_client()
@@ -54,6 +55,7 @@ class GeminiVisionService:
             return None, "API key not configured in .env"
 
         from google.genai import types
+        from services.gemini_retry import execute_with_retry
 
         lang_instruction = "Respond in English."
         if language == "or":
@@ -162,16 +164,29 @@ Do NOT wrap in markdown fences other than raw json or ```json.
                 mime_type=mime_type
             )
 
-            # Call real Gemini multimodal model
-            # Use gemini-2.5-flash or gemini-1.5-flash
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=[image_part, prompt],
-                config=types.GenerateContentConfig(
-                    temperature=0.2,
-                    response_mime_type="application/json"
+            # Call real Gemini multimodal model with bounded exponential backoff
+            def _call_gemini_vision():
+                return self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=[image_part, prompt],
+                    config=types.GenerateContentConfig(
+                        temperature=0.2,
+                        response_mime_type="application/json"
+                    )
                 )
+
+            response, err_info = execute_with_retry(
+                _call_gemini_vision,
+                max_retries=2,
+                initial_delay=1.0,
+                backoff_factor=2.0,
+                max_delay=4.0,
+                api_key_to_redact=self.api_key,
+                language=language
             )
+
+            if err_info is not None:
+                return None, err_info.get("message", "Gemini Vision API error.")
 
             raw_text = response.text.strip()
             # Clean possible markdown wrap
@@ -187,7 +202,7 @@ Do NOT wrap in markdown fences other than raw json or ```json.
             # Annotate with real AI transparency flag localized to selected language
             if language == "or":
                 transparency = {
-                    "active_engine": "ଗୁଗୁଲ୍ ଜେମିନାଇ ଭିଜନ୍ AI (Google Gemini 2.5 Flash - ବାସ୍ତବ AI)",
+                    "active_engine": f"ଗୁଗୁଲ୍ ଜେମିନାଇ ଭିଜନ୍ AI (Google Gemini 3.8 Flash - ବାସ୍ତବ AI)",
                     "weights_status": "ଗୁଗୁଲ୍ AI ଷ୍ଟୁଡିଓ ମାଧ୍ୟମରେ ସିଧାସଳଖ ପତ୍ର ଫଟୋ ବିଶ୍ଳେଷଣ ସକ୍ରିୟ।",
                     "dataset_compatibility": "ବିଶ୍ୱସ୍ତରୀୟ ଲକ୍ଷ ଲକ୍ଷ ଫସଲ ଓ ପତ୍ର ରୋଗ ତଥ୍ୟ ଉପରେ ପ୍ରଶିକ୍ଷିତ।",
                     "honest_note": (
@@ -198,7 +213,7 @@ Do NOT wrap in markdown fences other than raw json or ```json.
                 }
             elif language == "hi":
                 transparency = {
-                    "active_engine": "गूगल जेमिनी विज़न AI (Google Gemini 2.5 Flash - वास्तविक AI)",
+                    "active_engine": f"गूगल जेमिनी विज़न AI (Google Gemini 3.8 Flash - वास्तविक AI)",
                     "weights_status": "गूगल AI स्टूडियो के माध्यम से सीधे पत्ती फोटो विश्लेषण सक्रिय।",
                     "dataset_compatibility": "वैश्विक फसल एवं पादप रोग डेटासेट पर प्रशिक्षित।",
                     "honest_note": (
@@ -208,7 +223,7 @@ Do NOT wrap in markdown fences other than raw json or ```json.
                 }
             else:
                 transparency = {
-                    "active_engine": "Google Gemini 2.5 Flash Vision & Diagnostic Reasoning (Real AI)",
+                    "active_engine": f"Google Gemini 3.8 Flash Vision & Diagnostic Reasoning (Real AI)",
                     "weights_status": "Real-time multimodal neural vision inference active via Google AI Studio API.",
                     "dataset_compatibility": "Trained on massive real-world multimodal agricultural & botanical datasets.",
                     "honest_note": (
@@ -222,4 +237,6 @@ Do NOT wrap in markdown fences other than raw json or ```json.
 
         except Exception as e:
             err_str = str(e)
+            if self.api_key and self.api_key in err_str:
+                err_str = err_str.replace(self.api_key, "[REDACTED_API_KEY]")
             return None, f"Gemini Vision API error: {err_str}"

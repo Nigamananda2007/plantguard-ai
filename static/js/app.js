@@ -76,10 +76,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const tabBtns = document.querySelectorAll(".tab-btn");
     const tabContents = document.querySelectorAll(".tab-content");
 
+    // Report Follow-up Chat Elements
+    const reportChatCard = document.getElementById("reportChatCard");
+    const reportChatResetBtn = document.getElementById("reportChatResetBtn");
+    const reportChatContextText = document.getElementById("reportChatContextText");
+    const reportChatSuggestions = document.getElementById("reportChatSuggestions");
+    const reportChatMessages = document.getElementById("reportChatMessages");
+    const reportChatForm = document.getElementById("reportChatForm");
+    const reportChatInput = document.getElementById("reportChatInput");
+    const reportChatSendBtn = document.getElementById("reportChatSendBtn");
+
     // Application State
     let currentSelectedFile = null;
     let currentSelectedSampleId = null;
     let currentAnalysisResult = null; // Stored to allow real-time language re-rendering
+    let currentReportContext = null;  // Context fed into follow-up chat
+    let reportChatHistory = [];       // Multi-turn history for current report
+    let isReportChatWaiting = false;
     let cachedSamples = [];
     let isRealAIActive = false;
 
@@ -175,6 +188,42 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // Report Follow-up Chat Event Listeners
+    if (reportChatResetBtn) {
+        reportChatResetBtn.addEventListener("click", () => {
+            initReportChat(true);
+        });
+    }
+
+    if (reportChatForm) {
+        reportChatForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            sendReportChatMessage();
+        });
+    }
+
+    if (reportChatInput) {
+        reportChatInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendReportChatMessage();
+            }
+        });
+    }
+
+    if (reportChatSuggestions) {
+        reportChatSuggestions.addEventListener("click", (e) => {
+            const chip = e.target.closest(".quick-chip");
+            if (chip && !isReportChatWaiting) {
+                const text = chip.textContent.trim();
+                if (text && reportChatInput) {
+                    reportChatInput.value = text;
+                    sendReportChatMessage();
+                }
+            }
+        });
+    }
+
     /**
      * Checks if real AI API is configured
      */
@@ -224,6 +273,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 displayResults(currentAnalysisResult);
             }
         }
+
+        // Update Report Follow-up Chat if active
+        if (currentReportContext) {
+            if (reportChatHistory.length === 0) {
+                initReportChat(false);
+            } else {
+                renderReportChatSuggestions();
+            }
+        }
     }
 
     /**
@@ -236,6 +294,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const key = el.getAttribute("data-i18n");
             if (t[key] !== undefined) {
                 el.textContent = t[key];
+            }
+        });
+
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+            const key = el.getAttribute("data-i18n-placeholder");
+            if (t[key] !== undefined) {
+                el.placeholder = t[key];
             }
         });
 
@@ -305,6 +370,9 @@ document.addEventListener("DOMContentLoaded", () => {
         currentSelectedFile = null;
         currentSelectedSampleId = null;
         currentAnalysisResult = null;
+        currentReportContext = null;
+        reportChatHistory = [];
+        if (reportChatMessages) reportChatMessages.innerHTML = "";
         imageInput.value = "";
         imagePreview.src = "";
         previewContainer.classList.add("hidden");
@@ -623,8 +691,54 @@ document.addEventListener("DOMContentLoaded", () => {
         const honestDesc = d.model_transparency && d.model_transparency.honest_note 
             ? d.model_transparency.honest_note 
             : "";
-        modelHonestyText.innerHTML = `<strong>${t.ai_transparency_label}</strong> ${engineLabel}. ${honestDesc}`;
+
+        let retryHtml = "";
+        if (data.can_retry_ai && (currentSelectedFile || currentSelectedSampleId)) {
+            const retryLabel = t.retry_ai_analysis || (currentLang === "or" ? "🔄 ବାସ୍ତବ AI ବିଶ୍ଳେଷଣ ପୁନର୍ବାର ଚେଷ୍ଟା କରନ୍ତୁ" : "🔄 Retry Real AI Vision Analysis");
+            const promptLabel = t.temporary_error_retry_prompt || "Gemini AI temporarily busy. Click below to retry:";
+            retryHtml = `<div class="ai-retry-banner" style="margin-top: 12px; padding: 12px; background: rgba(46, 125, 50, 0.12); border: 1px solid rgba(46, 125, 50, 0.35); border-radius: 8px;">
+                <p style="margin: 0 0 8px 0; font-size: 0.95rem; font-weight: 500;">${promptLabel}</p>
+                <button type="button" id="btnRetryAiAnalysis" class="btn btn-sm btn-primary" style="cursor: pointer; padding: 6px 14px; font-weight: 600;">${retryLabel}</button>
+            </div>`;
+        }
+
+        modelHonestyText.innerHTML = `<strong>${t.ai_transparency_label}</strong> ${engineLabel}. ${honestDesc}${retryHtml}`;
         disclaimerText.textContent = `${t.disclaimer_prefix} ${data.disclaimer}`;
+
+        if (data.can_retry_ai && (currentSelectedFile || currentSelectedSampleId)) {
+            const retryBtnEl = document.getElementById("btnRetryAiAnalysis");
+            if (retryBtnEl) {
+                retryBtnEl.addEventListener("click", () => {
+                    analyzeLeafImage();
+                });
+            }
+        }
+
+        // 6. Connect & Initialize Report Follow-up AI Chat
+        currentReportContext = {
+            crop: d.crop || "",
+            condition: localizedCondition || d.condition || "",
+            confidence: d.confidence_percentage,
+            severity: d.severity,
+            pathogen: d.pathogen,
+            symptoms: d.symptoms || [],
+            pest_damage: {
+                detected: p.pest_damage_detected,
+                type: localizedPestType || p.damage_type,
+                culprits: p.likely_culprits || [],
+                severity: p.severity,
+                ipm: p.integrated_pest_management || []
+            },
+            organic_treatment: d.organic_treatment || [],
+            chemical_treatment: d.chemical_treatment || [],
+            prevention: d.prevention || []
+        };
+
+        if (reportChatContextText) {
+            reportChatContextText.textContent = `${d.crop} • ${localizedCondition} (${d.confidence_percentage}% Confidence)`;
+        }
+
+        initReportChat(false);
 
         // Show Results Card
         resultsWrapper.classList.remove("hidden");
@@ -682,5 +796,291 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function hideError() {
         errorCard.classList.add("hidden");
+    }
+
+    /**
+     * Initializes Report Follow-up AI Chat with current report context
+     */
+    function initReportChat(userInitiated = false) {
+        reportChatHistory = [];
+        if (!reportChatMessages) return;
+        reportChatMessages.innerHTML = "";
+
+        const crop = currentReportContext ? currentReportContext.crop : "";
+        const condition = currentReportContext ? currentReportContext.condition : "";
+
+        let greeting = "";
+        if (currentLang === "or") {
+            greeting = `ନମସ୍କାର! ମୁଁ ଆପଣଙ୍କ ପ୍ଲାଣ୍ଟଗାର୍ଡ AI ସହାୟକ। ଆପଣଙ୍କ ${crop || "ଫସଲ"}ର ${condition || "ପରୀକ୍ଷା"} ରିପୋର୍ଟ ସମ୍ପର୍କରେ ଚିକିତ୍ସା, କୀଟ ନିୟନ୍ତ୍ରଣ ବା ପ୍ରତିରୋଧ ବିଷୟରେ ଯେକୌଣସି ପ୍ରଶ୍ନ ପଚାରିପାରିବେ।`;
+        } else if (currentLang === "hi") {
+            greeting = `नमस्ते! मैं आपका प्लांटगार्ड AI सहायक हूँ। आपकी ${crop || "फसल"} की ${condition || "रिपोर्ट"} के बारे में उपचार, रोकथाम या देखभाल से जुड़ा कोई भी सवाल पूछ सकते हैं।`;
+        } else {
+            greeting = `Hello! I am your PlantGuard AI advisor. I have loaded the diagnostic context for ${crop || "your plant"} (${condition || "diagnosed issue"}). What follow-up questions can I answer about treatments, symptoms, or prevention?`;
+        }
+
+        appendReportChatBubble("assistant", greeting);
+        renderReportChatSuggestions();
+
+        if (reportChatInput) {
+            reportChatInput.value = "";
+            if (userInitiated) {
+                reportChatInput.focus();
+            }
+        }
+    }
+
+    function renderReportChatSuggestions() {
+        if (!reportChatSuggestions) return;
+        reportChatSuggestions.innerHTML = "";
+        const t = translations[currentLang] || translations.en;
+
+        const chips = [
+            t.report_chip_1 || "How fast will this condition spread?",
+            t.report_chip_2 || "Can I use organic neem spray for this?",
+            t.report_chip_3 || "What immediate action should I take today?",
+            t.report_chip_4 || "How should I adjust watering now?"
+        ];
+
+        const label = document.createElement("span");
+        label.className = "suggestions-label";
+        label.textContent = "💡 Suggested:";
+        reportChatSuggestions.appendChild(label);
+
+        chips.forEach((chipText) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "quick-chip";
+            btn.textContent = chipText;
+            reportChatSuggestions.appendChild(btn);
+        });
+    }
+
+    async function sendReportChatMessage(customText = null) {
+        if (isReportChatWaiting) return;
+
+        const text = (customText !== null ? customText : (reportChatInput ? reportChatInput.value : "")).trim();
+        if (!text) return;
+
+        if (reportChatInput) {
+            reportChatInput.value = "";
+        }
+
+        appendReportChatBubble("user", text);
+        const typingEl = appendReportTypingIndicator();
+        isReportChatWaiting = true;
+        setReportFormEnabled(false);
+        scrollReportChatToBottom();
+
+        try {
+            const payload = {
+                message: text,
+                history: reportChatHistory,
+                report_context: currentReportContext,
+                language: currentLang
+            };
+
+            const response = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            removeReportTypingIndicator(typingEl);
+
+            if (response.ok && data.success) {
+                appendReportChatBubble("assistant", data.reply);
+                reportChatHistory.push({ role: "user", text: text });
+                reportChatHistory.push({ role: "model", text: data.reply });
+                if (reportChatHistory.length > 10) {
+                    reportChatHistory = reportChatHistory.slice(-10);
+                }
+            } else {
+                handleReportChatError(data, text);
+            }
+        } catch (err) {
+            removeReportTypingIndicator(typingEl);
+            const netMsg = currentLang === "or"
+                ? "ସର୍ଭର ସହିତ ସଂଯୋଗ ହୋଇପାରିଲା ନାହିଁ। ଦୟାକରି ଯାଞ୍ଚ କରନ୍ତୁ।"
+                : currentLang === "hi"
+                ? "सर्वर से कनेक्ट करने में असमर्थ। कृपया कनेक्शन जांचें।"
+                : "Unable to connect to the server. Please check your network connection.";
+            appendReportErrorBubble(netMsg, text);
+        } finally {
+            isReportChatWaiting = false;
+            setReportFormEnabled(true);
+            if (reportChatInput) reportChatInput.focus();
+            scrollReportChatToBottom();
+        }
+    }
+
+    function handleReportChatError(data, failedPrompt) {
+        const t = translations[currentLang] || translations.en;
+        if (data && data.api_key_missing) {
+            const warningMsg = t.chat_missing_key_warning || (
+                "⚠️ Gemini API key is not configured on the server. Please add your GEMINI_API_KEY in the server .env file to enable live AI chat."
+            );
+            appendReportNoticeBubble(warningMsg);
+        } else {
+            const errorMsg = (data && data.error) ? data.error : "An unexpected error occurred while communicating with Gemini.";
+            appendReportErrorBubble(errorMsg, failedPrompt);
+        }
+    }
+
+    function appendReportChatBubble(role, rawText) {
+        if (!reportChatMessages) return;
+        const bubble = document.createElement("div");
+        bubble.className = `chat-bubble ${role}`;
+
+        const avatar = document.createElement("div");
+        avatar.className = "chat-avatar";
+        avatar.textContent = role === "user" ? "👤" : "🌿";
+
+        const content = document.createElement("div");
+        content.className = "chat-content";
+        content.innerHTML = formatChatMarkdown(rawText);
+
+        bubble.appendChild(avatar);
+        bubble.appendChild(content);
+        reportChatMessages.appendChild(bubble);
+        scrollReportChatToBottom();
+    }
+
+    function appendReportNoticeBubble(noticeText) {
+        if (!reportChatMessages) return;
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble system-notice";
+
+        const avatar = document.createElement("div");
+        avatar.className = "chat-avatar";
+        avatar.textContent = "⚙️";
+
+        const content = document.createElement("div");
+        content.className = "chat-content notice-content";
+        content.innerHTML = `<strong>Configuration Notice:</strong><p>${escapeChatHtml(noticeText)}</p>`;
+
+        bubble.appendChild(avatar);
+        bubble.appendChild(content);
+        reportChatMessages.appendChild(bubble);
+        scrollReportChatToBottom();
+    }
+
+    function appendReportErrorBubble(errorMessage, retryText) {
+        if (!reportChatMessages) return;
+        const t = translations[currentLang] || translations.en;
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble error";
+
+        const avatar = document.createElement("div");
+        avatar.className = "chat-avatar";
+        avatar.textContent = "⚠️";
+
+        const content = document.createElement("div");
+        content.className = "chat-content error-content";
+        content.innerHTML = `<strong>${t.chat_error_prefix || "Error:"}</strong> <p>${escapeChatHtml(errorMessage)}</p>`;
+
+        if (retryText) {
+            const retryBtn = document.createElement("button");
+            retryBtn.type = "button";
+            retryBtn.className = "btn btn-sm btn-retry";
+            retryBtn.textContent = `↺ ${t.chat_retry || "Retry"}`;
+            retryBtn.addEventListener("click", () => {
+                bubble.remove();
+                sendReportChatMessage(retryText);
+            });
+            content.appendChild(retryBtn);
+        }
+
+        bubble.appendChild(avatar);
+        bubble.appendChild(content);
+        reportChatMessages.appendChild(bubble);
+        scrollReportChatToBottom();
+    }
+
+    function appendReportTypingIndicator() {
+        if (!reportChatMessages) return null;
+        const t = translations[currentLang] || translations.en;
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble assistant typing-bubble";
+        bubble.id = "activeReportTypingIndicator";
+
+        const avatar = document.createElement("div");
+        avatar.className = "chat-avatar";
+        avatar.textContent = "🌿";
+
+        const content = document.createElement("div");
+        content.className = "chat-content";
+        content.innerHTML = `
+            <div class="typing-indicator" title="${t.chat_typing || 'Typing...'}">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            </div>
+        `;
+
+        bubble.appendChild(avatar);
+        bubble.appendChild(content);
+        reportChatMessages.appendChild(bubble);
+        return bubble;
+    }
+
+    function removeReportTypingIndicator(el) {
+        if (el && el.parentNode) {
+            el.parentNode.removeChild(el);
+        } else {
+            const fallback = document.getElementById("activeReportTypingIndicator");
+            if (fallback) fallback.remove();
+        }
+    }
+
+    function setReportFormEnabled(enabled) {
+        if (reportChatInput) reportChatInput.disabled = !enabled;
+        if (reportChatSendBtn) reportChatSendBtn.disabled = !enabled;
+    }
+
+    function scrollReportChatToBottom() {
+        if (reportChatMessages) {
+            reportChatMessages.scrollTop = reportChatMessages.scrollHeight;
+        }
+    }
+
+    function formatChatMarkdown(text) {
+        if (!text) return "";
+        let escaped = escapeChatHtml(text);
+        escaped = escaped.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+        const lines = escaped.split("\n");
+        let formatted = "";
+        let inList = false;
+
+        lines.forEach((line) => {
+            const trimmed = line.trim();
+            if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
+                if (!inList) {
+                    formatted += '<ul class="chat-bullet-list">';
+                    inList = true;
+                }
+                formatted += `<li>${trimmed.substring(2)}</li>`;
+            } else {
+                if (inList) {
+                    formatted += "</ul>";
+                    inList = false;
+                }
+                if (trimmed.length > 0) {
+                    formatted += `<p>${line}</p>`;
+                }
+            }
+        });
+
+        if (inList) {
+            formatted += "</ul>";
+        }
+        return formatted;
+    }
+
+    function escapeChatHtml(string) {
+        const div = document.createElement("div");
+        div.textContent = string;
+        return div.innerHTML;
     }
 });

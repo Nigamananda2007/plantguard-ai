@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Title -->
+    <title>PlantGuard AI 🌿 - ChatGPT-Style AI Assistant</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+
+    <!-- Header & Navigation -->
+    <header class="app-header">
+        <div class="container header-container">
+            <div class="brand">
+                <span class="brand-icon">🌿</span>
+                <div>
+                    <h1 class="brand-title" data-i18n="brand_title">PlantGuard AI</h1>
+                    <p class="brand-subtitle" data-i18n="brand_subtitle">Smart Crop Disease & Pest Damage Diagnostic Lab</p>
+                </div>
+            </div>
+            <nav class="app-nav" aria-label="Main Navigation">
+                <a href="/" class="nav-link" id="navLabLink">
+                    <span class="nav-icon">🔬</span>
+                    <span data-i18n="nav_lab">Diagnostic Lab</span>
+                </a>
+                <a href="/chat" class="nav-link active" id="navChatLink">
+                    <span class="nav-icon">💬</span>
+                    <span data-i18n="nav_chat">Plant AI Chat</span>
+                </a>
+            </nav>
+            <div class="header-status">
+                <div class="status-badge" id="chatStatusBadge">
+                    <span class="status-dot green" id="chatStatusDot"></span>
+                    <span class="status-label" id="chatStatusLabel" data-i18n="status_real_ai">PlantGuard AI Advisor</span>
+                </div>
+                <div class="lang-selector-group" title="Select Language">
+                    <span class="lang-globe-icon">🌐</span>
+                    <select id="chatLangSelect" class="lang-select" aria-label="Select Language">
+                        <option value="en">English</option>
+                        <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Chat Workspace -->
+    <main class="container main-content chat-page-main">
+
+        <div class="chat-standalone-card">
+            
+            <!-- Chat Card Top Bar -->
+            <div class="chat-card-topbar">
+                <div class="chat-header-info">
+                    <div class="chat-advisor-avatar">🌿</div>
+                    <div>
+                        <h2 class="chat-title" data-i18n="chat_page_title">PlantGuard AI Agri-Advisor</h2>
+                        <p class="chat-subtitle" data-i18n="chat_page_subtitle">Ask questions on crop diseases, pest remedies, organic treatments, soil health, and plant care.</p>
+                    </div>
+                </div>
+                <div class="chat-actions">
+                    <button type="button" class="btn btn-outline-secondary btn-new-chat" id="newChatBtn" title="Start a fresh conversation">
+                        <span class="btn-icon-text" data-i18n="btn_new_chat">+ New Chat</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Suggestion Prompt Chips -->
+            <div class="chat-quick-suggestions" id="chatSuggestions">
+                <span class="suggestions-label">💡 Suggested:</span>
+                <button type="button" class="quick-chip" data-prompt-key="chat_chip_1">How do I prevent tomato blight organically?</button>
+                <button type="button" class="quick-chip" data-prompt-key="chat_chip_2">Best organic remedy for aphids & sucking pests</button>
+                <button type="button" class="quick-chip" data-prompt-key="chat_chip_3">Why are my chilli plant leaves curling?</button>
+                <button type="button" class="quick-chip" data-prompt-key="chat_chip_4">How to make safe neem oil spray solution?</button>
+            </div>
+
+            <!-- Scrollable Message Stream -->
+            <div class="chat-messages-container standalone-messages" id="standaloneChatMessages" role="log" aria-live="polite">
+                <!-- Dynamically populated message bubbles -->
+            </div>
+
+            <!-- Chat Input Form -->
+            <form class="chat-input-form" id="standaloneChatForm">
+                <div class="chat-input-wrapper">
+                    <textarea id="standaloneChatInput" class="chat-input chat-textarea" placeholder="Ask about plant disease, organic pest remedies, crop care..." data-i18n-placeholder="chat_input_placeholder" rows="1" maxlength="1000" autocomplete="off"></textarea>
+                    <button type="submit" class="btn btn-primary chat-send-btn" id="standaloneChatSendBtn" aria-label="Send message">
+                        <span class="send-btn-text" data-i18n="btn_send">Send</span>
+                        <span class="send-icon">➤</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Agricultural Guidance Disclaimer Footer -->
+            <div class="chat-guidance-footer">
+                <small data-i18n="chat_disclaimer_note">⚠️ Agricultural educational guidance only. Always follow product labels and local agronomist recommendations.</small>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Floating Navigation Button to return to Diagnostic Lab -->
+    <a href="/" class="floating-assistant-btn" id="aiReturnToLabBtn" aria-label="Return to Diagnostic Lab" title="Return to Diagnostic Lab">
+        <span class="floating-btn-icon">🔬</span>
+        <span class="floating-btn-text" data-i18n="nav_lab">Diagnostic Lab</span>
+    </a>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="container footer-content">
+            <p>🌿 <strong data-i18n="footer_brand">PlantGuard AI</strong> • <span data-i18n="footer_tech">Built with Python, Flask, and Plant Pathology Science</span></p>
+            <p class="footer-note" data-i18n="footer_note">Crafted for agricultural sustainability and transparent pair programming.</p>
+        </div>
+    </footer>
+
+    <script src="/static/js/translations.js"></script>
+    <script src="/static/js/chat.js"></script>
+</body>
+</html>

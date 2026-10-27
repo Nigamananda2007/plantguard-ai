@@ -172,6 +172,93 @@ class TestPlantGuardAIChat(unittest.TestCase):
             self.assertFalse(data["success"])
             self.assertIn("Quota exceeded", data["error"])
 
+    @patch.object(gemini_chat_service, "is_available", return_value=True)
+    def test_chat_endpoint_503_high_demand_handling(self, mock_available):
+        """Verify /api/chat returns structured HTTP 503 and Retry-After header during high demand."""
+        mock_err = {
+            "message": "Google Gemini AI is currently experiencing high demand (503 Service Unavailable).",
+            "status_code": 503,
+            "can_retry": True,
+            "category": "high_demand_503"
+        }
+        with patch.object(gemini_chat_service, "chat", return_value=(None, mock_err)):
+            res = self.client.post("/api/chat", json={
+                "message": "Is this plant healthy?",
+                "language": "en"
+            })
+            self.assertEqual(res.status_code, 503)
+            data = res.get_json()
+            self.assertFalse(data["success"])
+            self.assertTrue(data["can_retry"])
+            self.assertIn("503", data["error"])
+            self.assertEqual(res.headers.get("Retry-After"), "5")
+
+    @patch.object(gemini_chat_service, "is_available", return_value=True)
+    def test_chat_endpoint_429_rate_limit_handling(self, mock_available):
+        """Verify /api/chat returns structured HTTP 429 and Retry-After header on quota/rate limit."""
+        mock_err = {
+            "message": "Gemini API rate limit reached (429 Too Many Requests).",
+            "status_code": 429,
+            "can_retry": True,
+            "category": "rate_limit_429"
+        }
+        with patch.object(gemini_chat_service, "chat", return_value=(None, mock_err)):
+            res = self.client.post("/api/chat", json={
+                "message": "What is tomato blight?",
+                "language": "en"
+            })
+            self.assertEqual(res.status_code, 429)
+            data = res.get_json()
+            self.assertFalse(data["success"])
+            self.assertTrue(data["can_retry"])
+            self.assertIn("429", data["error"])
+            self.assertEqual(res.headers.get("Retry-After"), "5")
+
+    @patch.object(gemini_chat_service, "is_available", return_value=True)
+    def test_chat_endpoint_504_timeout_handling(self, mock_available):
+        """Verify /api/chat returns structured HTTP 504 on deadline/timeout."""
+        mock_err = {
+            "message": "The AI request timed out before completing.",
+            "status_code": 504,
+            "can_retry": True,
+            "category": "timeout_504"
+        }
+        with patch.object(gemini_chat_service, "chat", return_value=(None, mock_err)):
+            res = self.client.post("/api/chat", json={
+                "message": "Diagnose my leaf",
+                "language": "en"
+            })
+            self.assertEqual(res.status_code, 504)
+            data = res.get_json()
+            self.assertFalse(data["success"])
+            self.assertTrue(data["can_retry"])
+
+    @patch.object(gemini_chat_service, "is_available", return_value=True)
+    def test_chat_endpoint_unexpected_exception_safety(self, mock_available):
+        """Verify /api/chat catches unexpected backend exceptions and returns safe JSON 500 without crashing."""
+        with patch.object(gemini_chat_service, "chat", side_effect=RuntimeError("Unexpected connection reset")):
+            res = self.client.post("/api/chat", json={
+                "message": "Explain photosynthesis",
+                "language": "en"
+            })
+            self.assertEqual(res.status_code, 500)
+            data = res.get_json()
+            self.assertFalse(data["success"])
+            self.assertTrue(data["can_retry"])
+            self.assertIn("unexpected error", data["error"].lower())
+
+    def test_gemini_client_reuse_does_not_leak_memory(self):
+        """Verify is_available() reuses client instance instead of recreating genai.Client repeatedly."""
+        with patch.dict("os.environ", {"GEMINI_API_KEY": "AIzaSyTestKeyForClientReuse"}):
+            service = gemini_chat_service.__class__()
+            # Initial client
+            first_client = service.client
+            # Multiple calls to is_available
+            for _ in range(5):
+                service.is_available()
+            # Must remain the exact same client object instance
+            self.assertIs(service.client, first_client)
+
     def test_multilingual_chat_translations(self):
         """Verify translations.js contains navigation and chat keys for English, Odia, and Hindi."""
         res = self.client.get("/static/js/translations.js")

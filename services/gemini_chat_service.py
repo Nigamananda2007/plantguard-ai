@@ -22,21 +22,37 @@ class GeminiChatService:
         self._init_client()
 
     def _init_client(self):
-        """Initializes google-genai Client if GEMINI_API_KEY is configured in environment."""
-        self.api_key = os.getenv("GEMINI_API_KEY", "").strip()
-        if self.api_key:
-            try:
-                from google import genai
-                self.client = genai.Client(api_key=self.api_key)
-            except Exception as e:
-                logger.warning(f"Could not initialize Gemini Client: {e}")
-                self.client = None
-        else:
+        """Initializes or reuses google-genai Client if GEMINI_API_KEY is configured."""
+        current_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if not current_key:
+            self.api_key = ""
+            self.client = None
+            return
+
+        # If key hasn't changed and client already exists, reuse it to avoid memory churn
+        if self.client is not None and self.api_key == current_key:
+            return
+
+        self.api_key = current_key
+        try:
+            from google import genai
+            from google.genai import types
+            # Minimum allowed deadline for Gemini API is 10s. Set 12s with single attempt to prevent duplicate retries.
+            self.client = genai.Client(
+                api_key=self.api_key,
+                http_options=types.HttpOptions(
+                    timeout=12000,
+                    retry_options=types.HttpRetryOptions(attempts=1)
+                )
+            )
+        except Exception as e:
+            logger.warning(f"Could not initialize Gemini Client: {e}")
             self.client = None
 
     def is_available(self):
         """Returns True if a valid Gemini API client is configured."""
-        self._init_client()
+        if self.client is None:
+            self._init_client()
         return self.client is not None and bool(self.api_key)
 
     def build_system_instruction(self, language="en", report_context=None):
@@ -213,18 +229,19 @@ Please answer the user's questions specifically in the context of this report. I
                 max_retries=2,
                 initial_delay=1.0,
                 backoff_factor=2.0,
-                max_delay=4.0,
+                max_delay=3.0,
+                max_total_duration=20.0,
                 api_key_to_redact=self.api_key,
                 language=language
             )
 
             if err_info is not None:
-                return None, err_info.get("message", "Gemini API error.")
+                return None, err_info
 
             if response and response.text:
                 return response.text.strip(), None
             else:
-                return None, "Received an empty response from Gemini."
+                return None, {"message": "Received an empty response from Gemini.", "status_code": 502, "can_retry": True}
 
         except Exception as e:
             err_str = str(e)
@@ -232,4 +249,8 @@ Please answer the user's questions specifically in the context of this report. I
             if self.api_key and self.api_key in err_str:
                 err_str = err_str.replace(self.api_key, "[REDACTED_API_KEY]")
             logger.error(f"Gemini Chat API call failed: {err_str}")
-            return None, f"Gemini API error: {err_str}"
+            return None, {
+                "message": f"Gemini API error: {err_str}",
+                "status_code": 502,
+                "can_retry": True
+            }

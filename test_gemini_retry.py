@@ -1,6 +1,7 @@
 """
 Tests for Gemini API Exponential Backoff, Error Classification, and Localization.
-Verifies bounded retries, 503/429 detection, API key masking, and Odia/English messaging.
+Verifies bounded retries, total duration deadline, 503/429 detection, API key masking,
+and Odia/English messaging.
 """
 
 import unittest
@@ -14,39 +15,44 @@ from services.gemini_retry import (
 
 class TestGeminiRetry(unittest.TestCase):
     def test_classify_503_high_demand(self):
-        """Verify 503 UNAVAILABLE / high demand is classified as temporary."""
+        """Verify 503 UNAVAILABLE / high demand is classified as temporary with status 503."""
         e1 = Exception("ServerError 503 UNAVAILABLE. This model is currently experiencing high demand.")
-        is_temp, cat = classify_gemini_error(e1)
+        is_temp, cat, status = classify_gemini_error(e1)
         self.assertTrue(is_temp)
         self.assertEqual(cat, "high_demand_503")
+        self.assertEqual(status, 503)
 
         e2 = Exception("The service is temporarily overloaded.")
-        is_temp2, cat2 = classify_gemini_error(e2)
+        is_temp2, cat2, status2 = classify_gemini_error(e2)
         self.assertTrue(is_temp2)
         self.assertEqual(cat2, "high_demand_503")
+        self.assertEqual(status2, 503)
 
     def test_classify_429_rate_limit(self):
-        """Verify 429 RESOURCE_EXHAUSTED / quota exceeded is classified as temporary."""
+        """Verify 429 RESOURCE_EXHAUSTED / quota exceeded is classified as temporary with status 429."""
         e = Exception("ClientError 429 RESOURCE_EXHAUSTED. Quota exceeded for quota metric.")
-        is_temp, cat = classify_gemini_error(e)
+        is_temp, cat, status = classify_gemini_error(e)
         self.assertTrue(is_temp)
         self.assertEqual(cat, "rate_limit_429")
+        self.assertEqual(status, 429)
 
     def test_classify_504_deadline_exceeded(self):
-        """Verify 504 DEADLINE_EXCEEDED is classified as temporary."""
+        """Verify 504 DEADLINE_EXCEEDED is classified as temporary with status 504."""
         e = Exception("ServerError 504 DEADLINE_EXCEEDED. Deadline expired before operation could complete.")
-        is_temp, cat = classify_gemini_error(e)
+        is_temp, cat, status = classify_gemini_error(e)
         self.assertTrue(is_temp)
         self.assertEqual(cat, "timeout_504")
+        self.assertEqual(status, 504)
 
     def test_classify_permanent_error_not_retried(self):
         """Verify 404 NOT_FOUND or 400 INVALID_ARGUMENT are not classified as temporary."""
         e_404 = Exception("ClientError 404 NOT_FOUND. Model not found.")
-        is_temp, cat = classify_gemini_error(e_404)
+        is_temp, cat, status = classify_gemini_error(e_404)
         self.assertFalse(is_temp)
+        self.assertEqual(status, 502)
 
         e_400 = Exception("ClientError 400 INVALID_ARGUMENT. Bad image format.")
-        is_temp2, cat2 = classify_gemini_error(e_400)
+        is_temp2, cat2, status2 = classify_gemini_error(e_400)
         self.assertFalse(is_temp2)
 
     def test_retry_immediate_success(self):
@@ -105,7 +111,32 @@ class TestGeminiRetry(unittest.TestCase):
         self.assertEqual(err["attempts_made"], 3)
         self.assertTrue(err["is_temporary"])
         self.assertEqual(err["category"], "high_demand_503")
+        self.assertEqual(err["status_code"], 503)
         self.assertIn("503", err["message"])
+
+    def test_retry_stops_when_max_total_duration_exceeded(self):
+        """Verify retry aborts when total elapsed request duration approaches deadline."""
+        mock_fn = MagicMock(side_effect=Exception("503 UNAVAILABLE. High demand."))
+        mock_sleep = MagicMock()
+
+        # Simulate clock advancing past deadline
+        times = [0.0, 10.0, 18.5, 25.0]
+        def mock_time():
+            return times.pop(0) if times else 30.0
+
+        res, err = execute_with_retry(
+            mock_fn,
+            max_retries=5,
+            initial_delay=1.0,
+            max_total_duration=15.0,
+            sleep_fn=mock_sleep,
+            time_fn=mock_time
+        )
+        self.assertIsNone(res)
+        self.assertIsNotNone(err)
+        # Should abort early without continuing to 5 retries
+        self.assertLessEqual(mock_fn.call_count, 2)
+        self.assertTrue(err["is_temporary"])
 
     def test_retry_aborts_immediately_on_non_temporary_error(self):
         """Verify non-temporary error fails immediately on 1st attempt without sleeping."""

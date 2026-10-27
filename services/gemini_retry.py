@@ -1,7 +1,8 @@
 """
 PlantGuard AI - Exponential Backoff and Error Categorization for Gemini API.
 Handles temporary errors (503 UNAVAILABLE, 429 RESOURCE_EXHAUSTED, 504 DEADLINE_EXCEEDED, timeouts)
-with a bounded retry loop, clear localization (Odia, English, Hindi), and API key sanitization.
+with a bounded retry loop, total request deadline, clear localization (Odia, English, Hindi),
+and API key sanitization.
 """
 
 import time
@@ -12,31 +13,31 @@ from typing import Callable, Any, Tuple, Optional, Dict
 logger = logging.getLogger(__name__)
 
 
-def classify_gemini_error(exc: Exception) -> Tuple[bool, str]:
+def classify_gemini_error(exc: Exception) -> Tuple[bool, str, int]:
     """
     Classifies an exception from google-genai or network socket.
-    Returns (is_temporary, category)
+    Returns (is_temporary, category, recommended_http_status)
     Categories: 'high_demand_503', 'rate_limit_429', 'timeout_504', 'network_timeout', 'other'
     """
     err_str = str(exc).lower()
 
     # 503 Service Unavailable / High demand / Temporary overloaded
     if "503" in err_str or "unavailable" in err_str or "high demand" in err_str or "temporarily overloaded" in err_str:
-        return True, "high_demand_503"
+        return True, "high_demand_503", 503
 
     # 429 Rate limit / Quota / Resource exhausted
     if "429" in err_str or "resource_exhausted" in err_str or "rate limit" in err_str or "quota" in err_str or "too many requests" in err_str:
-        return True, "rate_limit_429"
+        return True, "rate_limit_429", 429
 
     # 504 Deadline exceeded / Gateway timeout
     if "504" in err_str or "deadline_exceeded" in err_str or "gateway timeout" in err_str:
-        return True, "timeout_504"
+        return True, "timeout_504", 504
 
     # Network timeouts & socket issues
-    if "timeout" in err_str or "timed out" in err_str or "connection reset" in err_str or "connecterror" in err_str:
-        return True, "network_timeout"
+    if "timeout" in err_str or "timed out" in err_str or "connection reset" in err_str or "connecterror" in err_str or "readtimeout" in err_str:
+        return True, "network_timeout", 504
 
-    return False, "other"
+    return False, "other", 502
 
 
 def get_localized_gemini_error(category: str, language: str = "en", attempts: int = 1) -> str:
@@ -112,60 +113,90 @@ def execute_with_retry(
     max_retries: int = 2,
     initial_delay: float = 1.0,
     backoff_factor: float = 2.0,
-    max_delay: float = 4.0,
+    max_delay: float = 3.0,
+    max_total_duration: float = 20.0,
     api_key_to_redact: Optional[str] = None,
     language: str = "en",
-    sleep_fn: Callable[[float], None] = time.sleep
+    sleep_fn: Callable[[float], None] = time.sleep,
+    time_fn: Callable[[], float] = time.time
 ) -> Tuple[Optional[Any], Optional[Dict[str, Any]]]:
     """
-    Executes a callable with bounded exponential backoff for temporary 503/429/timeout errors.
+    Executes a callable with bounded exponential backoff and a total duration deadline.
 
     Args:
         callable_fn: Zero-arg function executing the Gemini SDK call.
-        max_retries: Max number of retries after initial attempt (default 2, total 3 calls max).
+        max_retries: Max number of retries after initial attempt (default 2, total 3 attempts max).
         initial_delay: Initial sleep in seconds before first retry.
         backoff_factor: Multiplier for exponential growth.
-        max_delay: Upper cap on sleep interval.
+        max_delay: Upper cap on individual sleep interval.
+        max_total_duration: Maximum allowed elapsed time across all attempts before giving up.
         api_key_to_redact: Optional API key string to redact from raw error messages.
         language: User language ('en', 'or', 'hi') for localized error message.
         sleep_fn: Sleep function (injectable for instant unit tests).
+        time_fn: Monotonic clock function (injectable for testing).
 
     Returns:
         (result, None) on success.
         (None, error_info_dict) on final failure.
     """
+    start_time = time_fn()
     attempt = 0
+
     while True:
+        elapsed = time_fn() - start_time
+        if elapsed >= max_total_duration and attempt > 0:
+            logger.warning(
+                f"Maximum request deadline ({max_total_duration}s) reached after {attempt} attempts. Aborting."
+            )
+            category = "timeout_504"
+            status_code = 504
+            localized_msg = get_localized_gemini_error(category, language=language, attempts=attempt)
+            return None, {
+                "is_temporary": True,
+                "category": category,
+                "status_code": status_code,
+                "raw_error": f"Total request duration exceeded {max_total_duration}s deadline.",
+                "message": localized_msg,
+                "attempts_made": attempt,
+                "can_retry": True
+            }
+
         try:
             result = callable_fn()
             return result, None
 
         except Exception as e:
-            is_temp, category = classify_gemini_error(e)
+            is_temp, category, status_code = classify_gemini_error(e)
             raw_err = str(e)
             if api_key_to_redact and api_key_to_redact in raw_err:
                 raw_err = raw_err.replace(api_key_to_redact, "[REDACTED_API_KEY]")
 
-            if is_temp and attempt < max_retries:
-                # Calculate exponential delay with small jitter
-                delay = min(max_delay, initial_delay * (backoff_factor ** attempt))
-                delay += random.uniform(0.05, 0.25)
+            elapsed_after_call = time_fn() - start_time
+            delay = min(max_delay, initial_delay * (backoff_factor ** attempt))
+            delay += random.uniform(0.1, 0.25)
+            remaining_budget = max_total_duration - elapsed_after_call
+
+            # Only retry if temporary, attempts remaining, and we have enough time budget
+            if is_temp and attempt < max_retries and remaining_budget > delay:
                 logger.warning(
                     f"Temporary Gemini error ({category}): {raw_err[:120]}. "
-                    f"Retrying attempt {attempt + 1}/{max_retries} in {delay:.2f}s..."
+                    f"Retrying attempt {attempt + 1}/{max_retries} in {delay:.2f}s "
+                    f"(remaining budget: {remaining_budget:.1f}s)..."
                 )
                 attempt += 1
                 sleep_fn(delay)
                 continue
 
-            # Retries exhausted or non-temporary error
+            # Retries exhausted, budget depleted, or non-temporary error
             logger.error(
-                f"Gemini API call failed (category={category}, attempts={attempt + 1}): {raw_err[:200]}"
+                f"Gemini API call terminated (category={category}, attempts={attempt + 1}, "
+                f"elapsed={elapsed_after_call:.2f}s): {raw_err[:200]}"
             )
             localized_msg = get_localized_gemini_error(category, language=language, attempts=attempt)
             error_info = {
                 "is_temporary": is_temp,
                 "category": category,
+                "status_code": status_code,
                 "raw_error": raw_err,
                 "message": localized_msg,
                 "attempts_made": attempt + 1,

@@ -138,21 +138,49 @@ def chat_endpoint():
             "disclaimer": disclaimer_msg
         }), 503
 
-    # Execute Gemini Chat query
-    reply, err = gemini_chat_service.chat(
-        message=message,
-        history=history,
-        report_context=report_context,
-        language=language
-    )
-
-    if err:
+    # Execute Gemini Chat query with comprehensive exception safety
+    try:
+        reply, err = gemini_chat_service.chat(
+            message=message,
+            history=history,
+            report_context=report_context,
+            language=language
+        )
+    except Exception as exc:
+        app.logger.exception("Unexpected error in chat_endpoint: %s", exc)
         return jsonify({
             "success": False,
-            "error": err,
+            "error": "An unexpected error occurred while processing your chat request. Please try again.",
             "api_key_missing": False,
             "can_retry": True
-        }), 502
+        }), 500
+
+    if err:
+        if isinstance(err, dict):
+            status_code = err.get("status_code", 502)
+            error_message = err.get("message") or err.get("raw_error") or "Chat request failed."
+            can_retry = err.get("can_retry", True)
+        else:
+            error_message = str(err)
+            can_retry = True
+            if "503" in error_message or "high demand" in error_message.lower():
+                status_code = 503
+            elif "429" in error_message or "rate limit" in error_message.lower():
+                status_code = 429
+            elif "504" in error_message or "timeout" in error_message.lower():
+                status_code = 504
+            else:
+                status_code = 502
+
+        response = jsonify({
+            "success": False,
+            "error": error_message,
+            "api_key_missing": False,
+            "can_retry": can_retry
+        })
+        if status_code in (503, 429):
+            response.headers["Retry-After"] = "5"
+        return response, status_code
 
     return jsonify({
         "success": True,
